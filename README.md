@@ -333,3 +333,103 @@ CALL <procedure_name>(@<output_name>)
 SELECT @<output_name>
 ```
 
+其中 <name> 为临时变量,只有当前语句有效
+
+@<name> 为用户会话变量，在整个回话过程中起作用
+
+@@<name> 为系统变量
+
+### Case语法结构
+
+条件语法有两种结构
+
+```mysql
+CASE <case_value>
+	WHEN <value1> THEN 
+		<statement1>
+	[WHEN <value2> THEN 
+  	<statement2>]
+  ELSE 
+  	<statement3>
+END CASE
+```
+
+```mysql
+CASE
+	WHEN <condition> THEN
+		<statement1>
+	[WHEN <condition> THEN
+		<statement2>]
+	ELSE 
+		<statement3>
+END CASE
+```
+
+### 循环
+
+while循环
+
+```mysql
+WHILE <condition> DO
+	<statement>
+END WHILE
+```
+
+Repeat 循环
+
+```mysql
+REPEAT
+	<statement>
+	UNTIL <condition>
+END REPEAT
+```
+
+loop循环(loop实现循环时，需要利用其他语句（例如LEAVE）定义推出条件)
+
+```mysql
+[<label>:] LOOP
+	<statement>
+END LOOP [<label>]
+```
+
+```mysql
+[<label>:] LOOP
+	<statement>
+	IF <condition> THEN
+		LEAVE <label>
+	END IF
+END LOOP [<label>]
+```
+
+### 游标
+
+游标是用来访问查询结果集的数据类型
+
+本质是用于将select返回的数据集保存在变量中
+
+声明游标
+
+```mysql
+DECLARE <cursor_name> CURSOR FOR <select_statement>
+```
+
+打开游标
+
+```mysql
+OPEN <cursor_name>
+```
+
+捕获内容
+
+游标最开始会出现在列表的第一行，每次调用FETCH函数就会往下移动一行（var的数量需要与列表行数一致）
+
+```mysql
+FETCH <cursor_name> INTO [<var_name1>,<var_name2>...]
+```
+
+退出游标
+
+```mysql
+CLOSE <cursor_name>
+```
+
