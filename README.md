@@ -433,3 +433,88 @@ FETCH <cursor_name> INTO [<var_name1>,<var_name2>...]
 CLOSE <cursor_name>
 ```
 
+使用句柄帮助循环使用游标（句柄必须写在游标定义下面一行）
+
+```mysql
+DECLARE <cursor_name> CURSOR FOR <select_statement>
+DECLARE EXIT <handler_name> FOR NOT FOUND 
+	<statement>
+```
+
+### 存储函数
+
+存储函数可以通过使用存储过程中的[OUT] 或者 [INOUT] 参数来达到相同的目的
+
+(在存储函数中的statement 使用RETURN关键字来输出返回值)
+
+```mysql
+CREATE FUNCTION <function_name>([<param_name> <param_type>]...)
+RETURNS <return_type>
+BEGIN
+	<statement>
+END
+```
+
+调用函数返回值
+
+```mysql
+SELECT CALL <function_name>([<param_name> <param_type>]...)
+```
+
+删除存储函数
+
+```mysql
+DROP FUNCTION <function_name>
+```
+
+# 触发器
+
+触发器是一种与表有关的数据库对象，当发生INSERT, UPDATE, 与DELETE 之前或之后调用触发器中定义的SQL语句
+
+触发器一般用于<u>数据完整性检测，记录日志，与数据校验</u>等等
+
+
+
+触发器使用NEW 与 OLD来应用触发器中发生变化的记录内容，触发器支持行级触发。
+
+在以下三种触发器中NEW与OLD的表示
+
+- INSERT触发器：NEW表示将要新增的数据
+- UPDATE触发器：OLD表示修改之前的数据，NEW表示修改后的数据
+- DELETE：OLD表示删除之前的数据
+
+
+
+## 创建触发器
+
+```mysql
+CREATE TRIGGER trigger_name
+BEFORE|AFTER INSERT|UPDATE|DELETE
+
+ON <table_name>
+
+[FOR EACH ROW] -- 行级触发器
+
+BEGIN
+	<statement> -- 包含变量NEW 与 OLD， 分别是数据改动之后/之前的行数据， 可通过例如NEW.id来访问数据
+END
+```
+
+MYSQL只支持行级触发器
+
+## 删除触发器
+
+删除触发器
+
+```mysql
+DROP TRIGGER <trigger_name>
+```
+
+## 查看触发器
+
+查看所有的触发器
+
+```mysql
+SHOW TRIGGERS
+```
+
