@@ -95,10 +95,10 @@ CREATE INDEX <index_name> ON <table_name>(<column_name>)
 
 ```mysql
 SHOW INDEX from <table_name>
-SHOW INDEX from <table_name>/G
+SHOW INDEX from <table_name>\G
 ```
 
-加上/G会显示更好观察的形式
+加上\G会显示更好观察的形式
 
 删除索引
 

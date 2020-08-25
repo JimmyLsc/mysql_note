@@ -182,5 +182,94 @@ SHOW [GLOBAL|SESSION] STATUS LIKE 'Innodb_rows_%' -- 针对引擎查询
 
 
 
-## EXPlAIN分析
+## EXPLAIN查询分析
+
+EXPLAIN 指令是描述查询计划的指令
+
+```mysql
+EXPLAIN <sql_select_statement>
+```
+
+得到的列：
+
+- id：select查询的序列号（以表为单位），是一组数字，表示的是查询中执行select子句或者是操作表的顺序（<u>id值越大表示优先级越高</u>，id相同则从上到下）
+
+- select_type：表示SELECT的类型，以下类型效率从高到低：
+
+  - SIMPLE：简单的SELECT不包含子查询与UNION
+  - PIRIMARY：查询中包含复杂的子查询，标记最外层为PRIMARY
+  - SUBQUERY：在SELECT与<u>WHERE中的子查询</u>
+  - DERIVED：在<u>FROM列表中包含的子查询</u>，MYSQL会递归的执行这些子查询，并加载临时表
+  - UNION：若第二个SELECT在UNION之后，则标记为UNION；若UNION包含在FROM子句的子查询中，最外层SELECT会被标记为DERIVED
+  - UNION RESULT：从UNION表获取结果的SELECT
+
+- table：输出结果集的表
+
+- type：表示表的连接类型，性能由好到差的连接类型为
+
+  - NULL：不访问任何表，索引
+  - system：只查询一行数据，一般出现在系统表查询中
+  - const：通过索引一次就查到了，const用于比较primary key或者unique索引。因为只匹配一行数据，所以很快。如将primary key放入where的列表中，mysql就能将该查询转换为一个常量。const于将唯一索引的部分与常量进行比较
+  - eq_ref：类似ref，区别在于使用的是唯一索引，使用主键的关联查询（包括UNION，JOIN，CROSS JOIN），关联查询出的记录只有一条，常见于主键或唯一索引扫描
+  - ref：非唯一性索引扫描，返回匹配某个单独值的所有行，本质也是一种索引访问，返回所有匹配某个单独值的所有行（多个）
+  - range：只检索给定返回的行，使用过一个索引来选择行。Where之后出现between，<，>, in 等操作
+  - index：index和ALL的区别为index类型只遍历了索引树，通常比ALL快，ALL是遍历数据文件（index本质就是select了一个索引列）
+  - ALL：遍历全表找到匹配的行
+
+  一般来说达到ref或者range级别就可以满足条件需求
+
+- possible_keys：表示查询时，可能使用的索引
+
+- key：表示实际使用的索引
+
+- key_len：索引字段的长度
+
+- rows：扫描行的数量
+
+- extra：执行情况的说明和描述
+
+
+
+## Show profiles
+
+查看是否支持profile
+
+```mysql
+SELECT @@have_profiling
+```
+
+开启show profiles功能
+
+```mysql
+SET profiling=1
+```
+
+查询所有操作耗时
+
+```mysql
+SHOW PROFILES
+```
+
+查询系统具体操作耗时
+
+```mysql
+SHOW PROFILE FOR QUERY <query_id>
+```
+
+## TRACE
+
+TRACE 可以用来追踪优化器工作
+
+打开TRACE，设置格式为JSON，并设置TRACE最大能够使用的内存大小，避免解析过程中因为默认内存过小而不能完整展示
+
+```mysql
+SET optimizer_trace="enabled=on", end_markers_in_json=on
+SET optimizer_trace_max_size=1000000
+```
+
+通过查询系统库的优化日志表来获取trace信息
+
+```mysql
+SELECT * FROM information_schema.optimizer_trace\G
+```
 
