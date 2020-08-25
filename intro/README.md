@@ -88,7 +88,7 @@ CREATE INDEX <index_name> ON <table_name>(<column_name>)
 CREATE方法创建复合索引
 
 ```mysql
-CREATE INDEX <index_name> ON <table_name>(<column_name>)
+CREATE INDEX <index_name> ON <table_name>([<column_name>]...)
 ```
 
 显示索引

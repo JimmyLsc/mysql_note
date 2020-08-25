@@ -182,7 +182,7 @@ SHOW [GLOBAL|SESSION] STATUS LIKE 'Innodb_rows_%' -- 针对引擎查询
 
 
 
-## EXPLAIN查询分析
+## EXPLAIN查询分析（最常用的分析工具）
 
 EXPLAIN 指令是描述查询计划的指令
 
@@ -273,3 +273,11 @@ SET optimizer_trace_max_size=1000000
 SELECT * FROM information_schema.optimizer_trace\G
 ```
 
+# 索引的使用
+
+索引是数据库优化最常用且最高效的手段
+
+1. 全值匹配，对索引中所有列表指定具体值。该情况下，索引生效，执行效率高
+2. 最左前缀索引，如果索引了多列，要遵守最左前缀法则，指的是查询从索引的最左前列开始，且不跳过索引的列
+3. 范围查询右边的列，不能使用索引（复合索引中范围查询后面字段的索引失效）
+4. 不要在索引列上进行运算操作，否则索引失效
