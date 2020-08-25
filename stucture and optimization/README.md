@@ -87,7 +87,7 @@ CREATE TABLE grade(
 	PRIMARY KEY (id),
 	FOREIGN KEY (student_id) REFERENCES people(id) ON DELETE RESTRICT ON UPDATE CASCADE
   -- 自动生成外键
-  [CONSTRAINT `fk_grade_people` FOREIGN KEY (student_id) REFERENCES people(id) ON DELETE RESTRICT ON UPDATE CASCADE] -- 命名式定义外键
+  [CONSTRAINT 'fk_grade_people' FOREIGN KEY (student_id) REFERENCES people(id) ON DELETE RESTRICT ON UPDATE CASCADE] -- 命名式定义外键
 	)ENGINE=innodb AUTO_INCREMENT=1 DEFAULT CHARSET=utf8
 ```
 
@@ -157,5 +157,30 @@ CREATE TABLE <merge_table_name>(
 
 
 
-# SQL优化
+# SQL问题检索
+
+## 查询
+
+查询数据库操作频次，判断数据库以什么操作为主
+
+```mysql
+SHOW [GLOBAL|SESSION] STATUS LIKE 'COM______' -- 数据库操作
+```
+
+```mysql
+SHOW [GLOBAL|SESSION] STATUS LIKE 'Innodb_rows_%' -- 针对引擎查询
+```
+
+
+
+## 定位
+
+主要通过两种方式定位低效率SQL语句
+
+- 慢查询日志：通过慢查询日志定位那些执行效率较低的SQL语句，查询较长执行长度的SQL语句。查询的是以完成被记录的操作日志。
+- SHOW PROCESSLIST：processlist查看sql语句实时执行情况。
+
+
+
+## EXPlAIN分析
 
