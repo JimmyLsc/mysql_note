@@ -273,7 +273,7 @@ SET optimizer_trace_max_size=1000000
 SELECT * FROM information_schema.optimizer_trace\G
 ```
 
-# 索引的使用
+# 索引的使用注意事项
 
 索引是数据库优化最常用且最高效的手段
 
@@ -292,3 +292,153 @@ SELECT * FROM information_schema.optimizer_trace\G
     - 创建复合索引时只创建一个索引表可以有多个索引列
     - Mysql会使用最优的索引方式，用单列索引有时会产生索引冗余（与索引‘辨识度’有关）
 
+
+
+查看索引使用情况(仅作为参考)
+
+```mysql
+SHOW STATUS [GLOBLE|SESSION] LIKE 'Handler_read%';
+```
+
+# SQL优化
+
+##  大批量插入数据
+
+使用load导入数据时，适当的设置可以提高导入的效率
+
+load基本语法
+
+```mysql
+LOAD DATA LOCAL INFILE '<file_path>' INTO TABLE '<table_name>' FIELDS TERMINATED BY '<file_terminated>' LINES TERMINATED BY '<line_terminated>'
+```
+
+对于InnoDB类型的表，有以下方式提高效率
+
+1. 主键顺序插入
+2. 关闭唯一性校验（SET UNIQUE_CHECKS=1）
+
+3. 手动提交事务（SET AUTOCOMMIT=0）
+
+
+
+## Insert优化
+
+1. Insert多行数据时，尽量使用多个值表的insert语句，可以减少客户端与数据库的连接，关闭次数
+
+   ```mysql
+   INSERT INTO <table_name> VALUES(<values1>),(<values2>),(<values3>),...
+   ```
+
+2. 在事务中进行数据插入
+
+   ```mysql
+   START TRANSACTION
+   <sql_statement>
+   COMMIT
+   ```
+
+3. 数据有序插入
+
+
+
+## 排序ORDER BY优化
+
+排序方式分为两种：
+
+1. 第一种方式通过对返回数据进行排序（FILESORT），所有不是通过索引直接返回排序结果的排序都叫FILESORT
+2. 第二种通过有序索引顺序扫描直接返回有序数据，这种为using index，不需要额外排序，操作效率高
+
+### using index
+
+使用覆盖索引能使用using index
+
+注意：多字段排序 ：
+
+- 要么全部升序，要么全部降序，否则会使用filesort
+- order顺序需要与索引顺序保持一致
+
+### filesort
+
+mysql有两种排序算法：
+
+1. 两次扫描算法：根据排序字段与行指针在sort buffer排序，之后再根据行指针在表中返回排序结果。对内存要求不高，但是大量随机I/O造成大量开销
+2. 一次扫描算法：一次性取出所有满足条件的字段，之后直接在sort buffer输出结果集。内存开销大，但效率高
+
+
+
+Mysql通过比较系统变量max_length_for_sort_data的大小和Query语句去除的字段总大小，来判定哪种排序算法，如果max_length_for_sort_data更大，那么使用第二种优化之后的算法，否则使用第一种
+
+优化时可以适当提高max_length_for_sort_data与sort_buffer_size的大小来提高排序效率（促使系统使用一次扫描算法）
+
+
+
+## GROUP BY优化
+
+- Group by会在group的时候默认排序，可以通过阻止排序提高分组效率
+
+```mysql
+SELECT count(<count_column>) FROM <table_name> GROUP BY <column> -- 优化前
+
+SELECT count(<count_column>) FROM <table_name> GROUP BY <column> ORDER BY null -- 优化后
+```
+
+- 创建对group by的索引也能提高效率
+
+
+
+## 嵌套查询
+
+使用JOIN多表连接查询代替子查询可以提高mysql效率（详情可参考SQL问题检索）
+
+
+
+## OR优化
+
+对于包含or的索引，必须保证or各个字段都必须要有索引且不能使用复合索引，否则后续索引失效。（原因是复合索引中不包含后面列的单列索引）
+
+建议通过union替换or来达到优化目的
+
+
+
+## 分页（LIMIT）操作优化
+
+LIMIT语法
+
+```mysql
+SELECT * FROM <table_name> LIMIT 10 -- 前10条
+SELECT * FROM <table_name> LIMIT 10,10 -- 11条到20条
+SELECT * FROM <table_name> LIMIT 20,10 -- 21条到30条
+...
+```
+
+在LIMIT语法中，对于LIMIT 20000,10这个语句，查询的是20010条目进行排序，然后丢弃20000个条目，效率极低
+
+
+
+### 优化思路
+
+- 使用索引（主键）先进行排序取出id，然后关联得到的id表与原表进行查询
+
+  ```mysql
+  SELECT * FROM <table_name> t, (SELECT id FROM <table_name> LIMIT 20000,10) a WHERE t.id = a.id
+  ```
+
+  
+
+- 把LIMIT查询转换为某个位置的查询，仅适用于主键自增的表
+
+  ```mysql
+  SELECT * FROM <table_name> WHERE id > 20000 LIMIT 10
+  ```
+
+  （原因：id走索引查询）
+
+  
+
+## 索引提示
+
+sql 提示是给数据参考索引：
+
+- 使用USE INDEX <index_name>提示数据库使用该索引
+- 使用IGNORE INDEX <index_name> 避免数据库使用某些索引
+- 使用FORCE INDEX <index_name> 强制数据库使用某索引
