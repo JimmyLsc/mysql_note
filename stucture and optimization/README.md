@@ -1,6 +1,6 @@
 # 体系结构
 
-![20150730152113099](/Users/jimmylsc/Desktop/20150730152113099.jpeg)
+![img](https://img-blog.csdn.net/20150730152113099?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
 
 连接层：Connection Pool接收客户端请求开启线程提供服务
 
