@@ -277,3 +277,157 @@ SHOW STATUS LIKE 'Table_locks%'
 返回值中Table_locks_immediate：指的是能够立即获得表级锁的次数，每次获得表级锁，值加一
 
 Table_locks_waited：指的是不能理解获得表级锁而需要等待的次数，每等待一次，值加一，值高说明较为严重的表级锁争用情况
+
+
+
+## InnoDB行锁
+
+偏向InnoDB存储引擎，开销大，加锁慢；锁定粒度最小，发生锁冲突的概率比较低，并发度最高，InnoDB与MyISAM的最大不同有两点：一是支持事务；二是采用的行级锁
+
+
+
+### 事务
+
+事务是由一组SQL语句组成的逻辑处理单元
+
+事务具有一下ACID四个特性
+
+| ACID属性              | 含义                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| 原子性（Atomicity）   | 事务是一个原子操作单元，其对数据的修改，要么全部成功，要么全部失败 |
+| 一致性（Consistency） | 在事务开始和完成时，数据都必须保持一致状态                   |
+| 隔离性（Isolation）   | 数据库系统提供一定的隔离机制，保证事务再不受外部并发操作影响的独立环境下运行 |
+| 持久性（duration）    | 事务完成之后，对于数据的修改也是永久的                       |
+
+
+
+### 并发事务处理带来的问题
+
+| 问题                                | 含义                                                         |
+| ----------------------------------- | ------------------------------------------------------------ |
+| 丢失更新（Lost Update）             | 当两个或多个事务选择同一行，最初的事务修改的值，会被后面的事务修改值覆盖 |
+| 脏读（Dirty Reads）                 | 当一个事务读取到了另一个事务还未提交的数据                   |
+| 不可重复读（Non-Repeateable Reads） | 一个事务再读取某些数据后的某个时间，再次读取以前读过的数据，却发现和以前读到的不一致（同一个事务内部） |
+| 幻读（Phantom Reads）               | 一个事务按照相同的查询条件重新读取以前查询过的数据，却发现其他事务插入满足其查询条件的新数据（同一个事务内部） |
+
+### 事务隔离级别
+
+为了解决上述提到的事务并发问题，数据库采用一定事务隔离机制来解决这个问题。数据据库的事务隔离越严格，并发副作用越小，但付出的代价也就越大，因为事务隔离实质上就是使用事务在一定程度上“串行化”进行，这显然与“并发”是矛盾的。
+
+数据库的隔离级别有4个，由低到高依次Read uncommitted， Read committed， Repeatable Read， Serializable，这四个可以解决脏写，脏读，不可重复读，幻读这几类问题
+
+| 隔离级别(F为不会出现，T为会出现） | 丢失更新 | 脏读 | 不可重复读 | 幻读 |
+| --------------------------------- | -------- | ---- | ---------- | ---- |
+| Read uncommitted                  | F        | T    | T          | T    |
+| Read committed                    | F        | F    | T          | T    |
+| Repeatable read（默认）           | F        | F    | F          | T    |
+| Serializable                      | F        | F    | F          | F    |
+
+Mysql默认使用Repeatable read查看方式为：
+
+```mysql
+SHOW VARIABLES LIKE 'tx_isolation'
+```
+
+
+
+### InnoDB的行锁模式
+
+InnoDB实现了两种类型行锁：
+
+- 共享锁（S）：又称为读锁，简称S锁，共享锁就是多个事务对于同一个数据可以共享一把锁，都能访问到数据，但是只能读不能更改
+- 排他锁（X）：又称为写锁，简称X锁，排他锁就是不能与其他所并存，如果一个事务获取了一个数据行的排他锁，其他事务就不能在获得该行的其他所，包括共享锁和排他锁，但是获取排他锁的事务是可以对数据就行读取和修改。
+
+对于UPDATE, DELETE, INSERT 语句，InnoDB会自动给涉及数据集添加排他锁（X）
+
+对于普通SELECT语句，InnoDB不会添加任何锁
+
+
+
+可以通过以下语句显示给记录集添加共享锁或者排他锁
+
+```mysql
+S：SELECT * FROM <table_name> WHERE <line_identification> LOCK IN SHARE MODE
+
+X: SELECT * FROM <table_name> WHERE <line_identification> FOR UPDATE
+```
+
+
+
+### 锁自动升级机制
+
+如果不通过索引检索数据，那么InnoDB将表中所有记录加锁，实际效果与表锁一致
+
+
+
+## 间隙锁
+
+当我们使用范围条件查询时，当使用共享锁或者排他锁是，InnoDB会自动给间值在范围内但是不存在的索引值添加间隙锁
+
+
+
+### 行锁争用情况
+
+查看行锁争用情况的指令
+
+```mysql
+SHOW STATUS LIKE 'innodb_row_lock%'
+```
+
+ 
+
+### 优化建议
+
+- 尽可能让所有数据检索能通过索引来完成，避免无索引行锁升级为表锁
+- 合理设计索引，尽量缩小锁的范围
+- 尽可能减少查询条件，查询范围，避免间隙锁
+- 尽量控制事务的大小，减少锁定资源量和时间长度
+- 尽可能降低事务隔离级别（满足业务需求前提下）
+
+
+
+## 执行顺序
+
+SQL编写顺序
+
+```mysql
+SELECT DISTINCT
+	<select list>
+FROM 
+	<left table><join type>
+JOIN 
+	<right table> ON <join_condiion>
+WHERE 
+	<where condition>
+GROUP BY
+	<group by list>
+HAVING 
+	<having condition>
+ORDER BY
+	<order by confition>
+LIMIT 
+	<limit params>
+```
+
+执行顺序
+
+```mysql
+FROM <left table>
+
+ON <join condition>
+
+<join type> JOIN <right table>
+
+WHERE <where_condition>
+
+GROUP BY <group by list>
+
+HAVING <having condition>
+
+SELECT DISTINCT <select list>
+
+ORDER BY <order by condition>
+
+LIMIT <limit params>
+```
+
